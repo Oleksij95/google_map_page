@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Waypoints in Directions</title>
+    <style>
+      #right-panel {
+        font-family: 'Roboto','sans-serif';
+        line-height: 30px;
+        padding-left: 10px;
+      }
+
+      #right-panel select, #right-panel input {
+        font-size: 15px;
+      }
+
+      #right-panel select {
+        width: 100%;
+      }
+
+      #right-panel i {
+        font-size: 12px;
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        height: 100%;
+        float: left;
+        width: 70%;
+        height: 100%;
+      }
+      #right-panel {
+        margin: 20px;
+        border-width: 2px;
+        width: 20%;
+        height: 400px;
+        float: left;
+        text-align: left;
+        padding-top: 0;
+      }
+      #directions-panel {
+        margin-top: 10px;
+        background-color: #FFEE77;
+        padding: 10px;
+        overflow: scroll;
+        height: auto;
+        max-height: 370px;
+      }
+      textarea{
+        width: 100%;
+      }
+    </style>
+
+    <script
+  src="https://code.jquery.com/jquery-3.3.1.js"
+  integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
+  crossorigin="anonymous"></script>
+  </head>
+  <body>
+  
+
+
+
+
+    <div id="map"></div>
+    <div id="right-panel">
+      <p>Список адрессов</p>
+      <textarea name="" id="address" cols="30" rows="10"></textarea>
+      <button id="build" onclick="drawPoint();">Построить маршрут</button>
+    <div>
+    <b>Начало маршрута:</b>
+    <select id="start">
+     
+    </select>
+    <br>
+    <b>Промежуточные точки:</b> <br>
+    <i>(Ctrl+Click or Cmd+Click for multiple selection)</i> <br>
+    <select multiple id="waypoints">
+      <!-- <option value="Академика Навашина ул.">Академика Навашина ул.</option>
+      <option value="Александра Довженко ул.">Александра Довженко ул.</option> -->
+      
+    </select>
+    <br>
+    <b>Конец маршрута:</b>
+    <select id="end">
+     
+    </select>
+    <br>
+      <input type="submit" id="submit">
+    </div>
+    <div id="directions-panel"></div>
+    </div>
+
+  <script>
+    function drawPoint() {
+      var address_arr = [];
+      txt = $('#address').val();  // use html() instead of val()
+        $.each(txt.split('\n'),function(i,value){
+          if(value!=""){
+            address_arr.push(value);
+          }
+        });
+        console.log(address_arr);
+
+        for (var i = 0; i < address_arr.length; i++){
+          address_arr[i] = address_arr[i].replace(/\"/g, '');
+          $("#waypoints").append('<option value="'+ address_arr[i] + '">'+ address_arr[i] +'</option>');
+        }
+
+        $("#start").append('<option value="'+ address_arr[1] + '">'+ address_arr[1] +'</option>');
+        $("#end").append('<option value="'+ address_arr[length-1] + '">'+ address_arr[length-1] +'</option>');
+
+
+    }
+  </script>
+
+
+    <script>
+      function initMap() {
+        var directionsService = new google.maps.DirectionsService;
+        var directionsDisplay = new google.maps.DirectionsRenderer;
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 10,
+          center: {lat: 50.45, lng: 30.50}
+        });
+        directionsDisplay.setMap(map);
+
+        document.getElementById('submit').addEventListener('click', function() {
+          calculateAndDisplayRoute(directionsService, directionsDisplay);
+        });
+      }
+
+      function calculateAndDisplayRoute(directionsService, directionsDisplay) {
+        var waypts = [];
+        var checkboxArray = document.getElementById('waypoints');
+        for (var i = 0; i < checkboxArray.length; i++) {
+          if (checkboxArray.options[i].selected) {
+            waypts.push({
+              location: checkboxArray[i].value,
+              stopover: true
+            });
+          }
+        }
+
+        console.log(waypts);
+
+        directionsService.route({
+          origin: document.getElementById('start').value,
+          destination: document.getElementById('end').value,
+          waypoints: waypts,
+          optimizeWaypoints: true,
+          travelMode: 'DRIVING'
+        }, function(response, status) {
+          if (status === 'OK') {
+            directionsDisplay.setDirections(response);
+            var route = response.routes[0];
+            var summaryPanel = document.getElementById('directions-panel');
+            summaryPanel.innerHTML = '';
+            // For each route, display summary information.
+            for (var i = 0; i < route.legs.length; i++) {
+              var routeSegment = i + 1;
+              summaryPanel.innerHTML += '<b>Сегмент маршрута: ' + routeSegment +
+                  '</b><br>';
+              summaryPanel.innerHTML += route.legs[i].start_address + ' до ';
+              summaryPanel.innerHTML += route.legs[i].end_address + '<br>';
+              summaryPanel.innerHTML += route.legs[i].distance.text + '<br><br>';
+            }
+          } else {
+            window.alert('Directions request failed due to ' + status);
+          }
+        });
+      }
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqLdRt7zZulKlw_4KIR78D2ZvEc4chlkw&callback=initMap">
+    </script>
+  </body>
+</html>
