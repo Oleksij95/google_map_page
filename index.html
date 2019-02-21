@@ -68,7 +68,7 @@
 
     <div id="map"></div>
     <div id="right-panel">
-      <p>Список адрессов</p>
+      <p>Список адресов</p>
       <textarea name="" id="address" cols="30" rows="10"></textarea>
       <button id="build" onclick="drawPoint();">Построить маршрут</button>
     <div>
@@ -91,11 +91,19 @@
     </select>
     <br>
       <input type="submit" id="submit">
+      <button onclick="clearMap();">Очистить</button>
     </div>
     <div id="directions-panel"></div>
     </div>
 
   <script>
+    
+    function clearMap() {
+      $("input[id != submit], textarea").val("");
+      $("select, #directions-panel").empty();
+      initMap();
+    }
+
     function drawPoint() {
       var address_arr = [];
       txt = $('#address').val();  // use html() instead of val()
@@ -104,15 +112,29 @@
             address_arr.push(value);
           }
         });
-        console.log(address_arr);
+
+        if($("#waypoints option").length > 0){
+          $("#waypoints > *").remove();
+        }
+
+        if($("#start option").length > 0){
+          $("#start > *").remove();
+        }
+
+        if($("#end option").length > 0){
+          $("#end > *").remove();
+        }
+
 
         for (var i = 0; i < address_arr.length; i++){
           address_arr[i] = address_arr[i].replace(/\"/g, '');
-          $("#waypoints").append('<option value="'+ address_arr[i] + '">'+ address_arr[i] +'</option>');
+          $("#waypoints").append('<option selected value="'+ address_arr[i] + '">'+ address_arr[i] +'</option>');
         }
 
         $("#start").append('<option value="'+ address_arr[1] + '">'+ address_arr[1] +'</option>');
         $("#end").append('<option value="'+ address_arr[length-1] + '">'+ address_arr[length-1] +'</option>');
+
+        checkAddressList();
 
 
     }
@@ -134,8 +156,32 @@
         });
       }
 
+      function checkAddressList() {
+        geocoder = new google.maps.Geocoder();
+        var address = document.getElementById('address').value;
+        $("#waypoints option:selected").each(function(){
+
+            // console.log(this.value);
+          var th = this;
+          geocoder.geocode( { 'address': this.value}, function(results, status) {
+          if (status == 'OK') {
+            console.log(th.value + " status ok");
+            return;
+          } else {
+            alert('Ошибка адреса: ' + th.value);
+            return;
+          }
+        });
+        })
+
+        
+      }
+      
       function calculateAndDisplayRoute(directionsService, directionsDisplay) {
         var waypts = [];
+         var all_distance_mass = [];
+         var all_distance = 0;
+        // var regex = /[\d|,|.|e|E|\+]+/g;
         var checkboxArray = document.getElementById('waypoints');
         for (var i = 0; i < checkboxArray.length; i++) {
           if (checkboxArray.options[i].selected) {
@@ -146,8 +192,6 @@
           }
         }
 
-        console.log(waypts);
-
         directionsService.route({
           origin: document.getElementById('start').value,
           destination: document.getElementById('end').value,
@@ -156,6 +200,7 @@
           travelMode: 'DRIVING'
         }, function(response, status) {
           if (status === 'OK') {
+           
             directionsDisplay.setDirections(response);
             var route = response.routes[0];
             var summaryPanel = document.getElementById('directions-panel');
@@ -163,12 +208,19 @@
             // For each route, display summary information.
             for (var i = 0; i < route.legs.length; i++) {
               var routeSegment = i + 1;
+
               summaryPanel.innerHTML += '<b>Сегмент маршрута: ' + routeSegment +
                   '</b><br>';
               summaryPanel.innerHTML += route.legs[i].start_address + ' до ';
               summaryPanel.innerHTML += route.legs[i].end_address + '<br>';
               summaryPanel.innerHTML += route.legs[i].distance.text + '<br><br>';
             }
+         
+           for (var i = 0; i < route.legs.length; i++) {
+              all_distance_mass[i] = parseFloat(route.legs[i].distance.text.replace(/\,/g,"."));
+              all_distance += all_distance_mass[i];
+           }
+            summaryPanel.innerHTML += "<b>Общая дистанция маршрута: </b>" + all_distance + ' км <br>';
           } else {
             window.alert('Directions request failed due to ' + status);
           }
